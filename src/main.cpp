@@ -21,7 +21,7 @@ const char* mqtt_server = "test.mosquitto.org";
 const uint16_t mqtt_port = 1883;
 WiFiClient espClient;
 PubSubClient client(espClient);
-extern int interval = 10;
+int interval = 10;
 
 
 StaticJsonDocument<512> packet;
@@ -36,8 +36,8 @@ BH1750 lightMeter;
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
-DeviceAddress insideThermometer;
-DeviceAddress outsideThermometer;
+DeviceAddress thermometer[2];
+int ds18b20_count;
 float probe_temp = 0;
 unsigned long previousMillis = 0;
 int counter = 0;
@@ -73,27 +73,36 @@ void setup() {
   Serial.println("BME 0x77 Initialized");
 
   bh1750Init(&lightMeter,21,22);
-  ds18b20Init( &sensors);
+  ds18b20_count =  ds18b20Init( &sensors);
   Serial.print("Parasite power is: "); 
-  if (sensors.isParasitePowerMode()) Serial.println("ON");
-  else Serial.println("OFF");
-  if (!sensors.getAddress(insideThermometer, 0)) Serial.println("Unable to find address for Device 0"); 
-  delay(1000);
-  Serial.print("Device 0 Address: ");
-  printAddress(insideThermometer);
-    sensors.setResolution(insideThermometer, 9);
-  Serial.println("Device 0 Resolution: ");
-  Serial.print(sensors.getResolution(insideThermometer), DEC); 
-  Serial.println();
+  if (sensors.isParasitePowerMode()) 
+    Serial.println("ON");
+  else
+    Serial.println("OFF");
+  for(int i = 0 ;i<ds18b20_count;i++)
+  {
+    if (!sensors.getAddress(thermometer[i], i)) 
+    {
+      Serial.print("Unable to find address for Device "); 
+      Serial.println(i);
+    }
+    else
+    {
+      delay(1000);
+      Serial.print("Device");
+      Serial.print(i);
+      Serial.print(" Address:");
+      printAddress(thermometer[i]);
+      sensors.setResolution(thermometer[i], 9);
+      Serial.print("Device");
+      Serial.print(i);
+      Serial.print(" Resolution:");
+      Serial.print(sensors.getResolution(thermometer[i]), DEC); 
+      Serial.println();
+    }
 
-  if (!sensors.getAddress(outsideThermometer, 1)) Serial.println("Unable to find address for Device 0"); 
-  delay(1000);
-  Serial.print("Device 1 Address: ");
-  printAddress(outsideThermometer);
-    sensors.setResolution(outsideThermometer, 9);
-  Serial.println("Device 1 Resolution: ");
-  Serial.print(sensors.getResolution(outsideThermometer), DEC); 
-  Serial.println();
+  }
+
 
   if(!getLocalTime(&timeinfo)){
     Serial.println("Failed to obtain time");
@@ -141,35 +150,28 @@ void loop() {
   packet["Humidity2"] = bme2.readHumidity();
   packet["Temperature2"] = bme2.readTemperature();
   packet["Pressure2"] = bme2.readPressure()/100.0F;
-  probe_temp = ds18b20Read(insideThermometer,&sensors);
-  while ((probe_temp == 85)or(probe_temp == -127.0))
+  for(int i = 0 ;i<ds18b20_count;i++)
   {
-    Serial.print("Sensor1 "); Serial.println(probe_temp);
-    ds18b20Init( &sensors);
-    delay(50);
-    probe_temp = ds18b20Read(insideThermometer,&sensors);
-    unsigned long currentMillis = millis();
-    if (currentMillis - previousMillis >= interval*500)
-      break;
-  
+    probe_temp = ds18b20Read(thermometer[i],&sensors);
+    while ((probe_temp == 85)or(probe_temp == -127.0))
+    {
+      Serial.print("Sensor ");Serial.print(i); Serial.println(probe_temp);
+      ds18b20Init( &sensors);
+      delay(50);
+      probe_temp = ds18b20Read(thermometer[i],&sensors);
+      unsigned long currentMillis = millis();
+      if (currentMillis - previousMillis >= interval*500)
+        break;
+    
+    }
+    if (i == 0)
+    packet["Probe_Temperature 1"] = probe_temp;
+    if (i == 1)
+    packet["Probe_Temperature 2"] = probe_temp;
   }
-  packet["Probe_Temperature1"] = probe_temp;
-    probe_temp = ds18b20Read(outsideThermometer,&sensors);
-  while ((probe_temp == 85)or(probe_temp == -127.0))
-  {
-    Serial.print("Sensor2 "); Serial.println(probe_temp);
-    ds18b20Init( &sensors);
-    delay(50);
-    probe_temp = ds18b20Read(outsideThermometer,&sensors);
-    Serial.println(".");
-    unsigned long currentMillis = millis();
-    if (currentMillis - previousMillis >= interval*500)
-      break;
-  
-  }
-  packet["Probe_Temperature2"] = probe_temp;
+
   packet["Light"] = lightMeter.readLightLevel();
-  serializeJson( packet,  &data,  512);
+  serializeJson(packet, &data, 512);
 
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval*1000){
@@ -186,11 +188,4 @@ void loop() {
     }
     previousMillis =millis();
   }
-
-    
-
-  
-
-
-
 }
