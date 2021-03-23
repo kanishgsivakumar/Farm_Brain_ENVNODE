@@ -30,9 +30,11 @@ char data[512];
 uint32_t chipId = getUniqueID();
 char chipId_s[20] ;
 
-Adafruit_BME280 bme1,bme2; 
+Adafruit_BME280 bme1,bme2;
+bool bme1_status,bme2_status; 
 
 BH1750 lightMeter;
+bool lightMeter_status;
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
@@ -66,13 +68,19 @@ void setup() {
   digitalWrite(led_server,HIGH);
   Otastart(&otaServer,itoa(chipId,chipId_s,10));
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-  if (bme280Init(&bme1,0x76))
+
+  bme1_status= bme280Init(&bme1,0x76);
+  if (bme1_status)
   Serial.println("BME 0x76 Initialized");
 
-  if (bme280Init(&bme2,0x77))
+  bme2_status= bme280Init(&bme2,0x77);
+  if (bme2_status)
   Serial.println("BME 0x77 Initialized");
 
-  bh1750Init(&lightMeter,21,22);
+  lightMeter_status =  bh1750Init(&lightMeter,21,22);
+  if (lightMeter_status)
+  Serial.println("BH1750 Initialized");
+
   ds18b20_count =  ds18b20Init( &sensors);
   Serial.print("Parasite power is: "); 
   if (sensors.isParasitePowerMode()) 
@@ -144,12 +152,20 @@ void loop() {
   packet["UID"] = getUniqueID();
   packet["Hours"]= timeHour;
   packet["counter"] = counter;
-  packet["Humidity1"] = bme1.readHumidity();
-  packet["Temperature1"] = bme1.readTemperature();
-  packet["Pressure1"] = bme1.readPressure()/100.0F;
-  packet["Humidity2"] = bme2.readHumidity();
-  packet["Temperature2"] = bme2.readTemperature();
-  packet["Pressure2"] = bme2.readPressure()/100.0F;
+  if (bme1_status)
+  {
+    packet["Humidity1"] = bme1.readHumidity();
+    packet["Temperature1"] = bme1.readTemperature();
+    packet["Pressure1"] = bme1.readPressure()/100.0F;
+
+  }
+  if (bme2_status)
+  {
+    packet["Humidity2"] = bme2.readHumidity();
+    packet["Temperature2"] = bme2.readTemperature();
+    packet["Pressure2"] = bme2.readPressure()/100.0F;
+
+  }
   for(int i = 0 ;i<ds18b20_count;i++)
   {
     probe_temp = ds18b20Read(thermometer[i],&sensors);
@@ -169,8 +185,9 @@ void loop() {
     if (i == 1)
     packet["Probe_Temperature 2"] = probe_temp;
   }
-
+  if(lightMeter_status)
   packet["Light"] = lightMeter.readLightLevel();
+  
   serializeJson(packet, &data, 512);
 
   unsigned long currentMillis = millis();

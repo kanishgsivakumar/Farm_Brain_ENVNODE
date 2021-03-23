@@ -9,7 +9,7 @@ bool bme280Init(Adafruit_BME280* bme280,uint8_t addr)
                     Adafruit_BME280::SAMPLING_X1, // pressure
                     Adafruit_BME280::SAMPLING_X1, // humidity
                     Adafruit_BME280::FILTER_OFF   );
-    if (bme280->sensorID() == 60)
+    if (bme280->sensorID() == 0x60)
     {
         return true;
     }
