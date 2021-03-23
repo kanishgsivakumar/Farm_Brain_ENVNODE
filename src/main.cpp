@@ -23,13 +23,12 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 int interval = 10;
 
-
 StaticJsonDocument<512> packet;
 char data[512];
 
 uint32_t chipId = getUniqueID();
 char chipId_s[20] ;
-
+char outtopic[30] = "/";
 Adafruit_BME280 bme1,bme2;
 bool bme1_status,bme2_status; 
 
@@ -64,7 +63,12 @@ void setup() {
   digitalWrite(led_wifi,HIGH);
   delay(2500);
   digitalWrite(led_server,LOW);
+  itoa(chipId,chipId_s,10);
+  strcat(outtopic,chipId_s);
+  strcat(outtopic,"/data");
+  Serial.println(outtopic);
   MQTTconnect(mqtt_server,mqtt_port,&client,itoa(chipId,chipId_s,10));
+  client.publish(outtopic,strcat(chipId_s ," is connected and Ready"));
   digitalWrite(led_server,HIGH);
   Otastart(&otaServer,itoa(chipId,chipId_s,10));
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
@@ -193,16 +197,16 @@ void loop() {
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval*1000){
     Serial.println(data);
-    if (client.publish("/outtopic",data))
+    if (client.publish(outtopic,data))
     {
       Serial.println("Published");
       counter++;
+      previousMillis =millis();
     }
     else
     {
       Serial.println("Error");
       counter++;
     }
-    previousMillis =millis();
   }
 }

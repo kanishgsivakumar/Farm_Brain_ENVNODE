@@ -18,12 +18,8 @@ void MQTTconnect(const char* mqtt_server,const uint16_t mqtt_port,PubSubClient* 
     while (!client -> connected()) {
         Serial.println("Connecting to MQTT...");
         if (client -> connect(chipId_s)) {
-            Serial.println(client -> state());
-                client -> publish("/outtopic",strcat(chipId_s ," is connected and Ready"));
                 delay(100);
-            Serial.println(client -> state());
                 client -> subscribe("/intopic");
-            Serial.println(client -> state());
                 delay(400);
         } else {
             Serial.print("failed with state ");
