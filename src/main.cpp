@@ -24,12 +24,13 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 int interval = 10;
 
-StaticJsonDocument<512> packet;
-char data[512];
+StaticJsonDocument<768> packet;
+char datastr[768];
+JsonArray data = packet.createNestedArray("data");
 
 uint32_t chipId = getUniqueID();
 char chipId_s[10] ;
-char outtopic[20] = "/";
+char outtopic[20] = "node/";
 Adafruit_BME280 bme1,bme2;
 bool bme1_status,bme2_status; 
 
@@ -154,22 +155,37 @@ void loop() {
     counter = 0;
     prevHour= atoi(timeHour);
   }
-  packet["IP"] =  WiFi.localIP().toString();
-  packet["UID"] = getUniqueID();
-  packet["Hours"]= timeHour;
-  packet["counter"] = counter;
+  JsonObject data_0 = data.createNestedObject();
+  data_0["key"] = "counter";
+  data_0["value"] = 324;
+
+  JsonObject data_1 = data.createNestedObject();
+  data_1["key"] = "hours";
+  data_1["value"] = 21;
   if (bme1_status)
   {
-    packet["Humidity1"] = bme1.readHumidity();
-    packet["Temperature1"] = bme1.readTemperature();
-    packet["Pressure1"] = bme1.readPressure()/100.0F;
+    JsonObject data_2 = data.createNestedObject();
+    data_2["key"] = "humidity1";
+    data_2["value"]  = bme1.readHumidity();
+    JsonObject data_4 = data.createNestedObject();
+    data_4["key"] = "temperature1";
+    data_4["value"] = bme1.readTemperature();
+    JsonObject data_6 = data.createNestedObject();
+    data_6["key"] = "pressure1";
+    data_6["value"] = bme1.readPressure()/100.0F;
 
   }
   if (bme2_status)
   {
-    packet["Humidity2"] = bme2.readHumidity();
-    packet["Temperature2"] = bme2.readTemperature();
-    packet["Pressure2"] = bme2.readPressure()/100.0F;
+    JsonObject data_3 = data.createNestedObject();
+    data_3["key"] = "humidity2";
+    data_3["value"]  = bme2.readHumidity();
+    JsonObject data_5 = data.createNestedObject();
+    data_5["key"] = "temperature2";
+    data_5["value"] = bme2.readTemperature();
+    JsonObject data_7 = data.createNestedObject();
+    data_7["key"] = "pressure2";
+    data_7["value"] = bme2.readPressure()/100.0F;
 
   }
   for(int i = 0 ;i<ds18b20_count;i++)
@@ -187,19 +203,30 @@ void loop() {
     
     }
     if (i == 0)
-    packet["Probe_Temperature 1"] = probe_temp;
+    {
+      JsonObject data_8 = data.createNestedObject();
+      data_8["key"] = "probetemperature1";
+      data_8["value"] = probe_temp;
+    }
     if (i == 1)
-    packet["Probe_Temperature 2"] = probe_temp;
+    {
+      JsonObject data_9 = data.createNestedObject();
+      data_9["key"] = "probetemperature2";
+      data_9["value"] = probe_temp;
+    }
   }
   if(lightMeter_status)
-  packet["Light"] = lightMeter.readLightLevel();
-  
-  serializeJson(packet, &data, 512);
+  {
+    JsonObject data_10 = data.createNestedObject();
+    data_10["key"] = "lux";
+    data_10["value"] = 29.2;  
+  } 
+  serializeJson(packet, &datastr, 768);
 
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval*1000){
     Serial.println(data);
-    if (client.publish(outtopic,data))
+    if (client.publish(outtopic,datastr))
     {
       Serial.print("Published to ");
       Serial.println(outtopic);
