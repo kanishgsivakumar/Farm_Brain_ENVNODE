@@ -14,10 +14,11 @@
 #include <DallasTemperature.h>
 #include <FBenv_sensor.h>
 #include <time.h>
+
 #define ONE_WIRE_BUS 23
 AsyncWebServer otaServer(80);
 
-const char* mqtt_server = "test.mosquitto.org";
+const char* mqtt_server = "mqtt.sustenance.co.in";
 const uint16_t mqtt_port = 1883;
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -27,8 +28,8 @@ StaticJsonDocument<512> packet;
 char data[512];
 
 uint32_t chipId = getUniqueID();
-char chipId_s[20] ;
-char outtopic[30] = "/";
+char chipId_s[10] ;
+char outtopic[20] = "/";
 Adafruit_BME280 bme1,bme2;
 bool bme1_status,bme2_status; 
 
@@ -137,6 +138,7 @@ void loop() {
     digitalWrite(led_server,LOW);
     MQTTreconnect(&client,itoa(chipId,chipId_s,10));
     delay(1000);
+    client.publish(outtopic,"connected and ready");
   }
   digitalWrite(led_server,HIGH);
   if(!getLocalTime(&timeinfo)){
@@ -147,7 +149,7 @@ void loop() {
   char timeHour[3],timeMin[3];
   strftime(timeHour,3, "%H", &timeinfo);
   strftime(timeMin,3, "%M", &timeinfo);
-  if (atoi(timeHour)>prevHour)
+  if (atoi(timeHour)!=prevHour)
   {
     counter = 0;
     prevHour= atoi(timeHour);
@@ -199,7 +201,8 @@ void loop() {
     Serial.println(data);
     if (client.publish(outtopic,data))
     {
-      Serial.println("Published");
+      Serial.print("Published to ");
+      Serial.println(outtopic);
       counter++;
       previousMillis =millis();
     }

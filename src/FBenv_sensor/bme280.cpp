@@ -1,6 +1,11 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
-
+/**
+ * Configure sensor
+ * @param bme280 bme280 instance
+ * @param addr Address of the sensor
+ * @return a boolean if init is successful
+ */
 bool bme280Init(Adafruit_BME280* bme280,uint8_t addr)
 {
     bme280->begin(addr);
