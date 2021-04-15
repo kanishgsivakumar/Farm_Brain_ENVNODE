@@ -26,7 +26,7 @@ int interval = 10;
 
 StaticJsonDocument<768> packet;
 char datastr[768];
-JsonArray data = packet.createNestedArray("data");
+
 
 uint32_t chipId = getUniqueID();
 char chipId_s[10] ;
@@ -150,18 +150,20 @@ void loop() {
   char timeHour[3],timeMin[3];
   strftime(timeHour,3, "%H", &timeinfo);
   strftime(timeMin,3, "%M", &timeinfo);
+  packet["UID"] = getUniqueID();
   if (atoi(timeHour)!=prevHour)
   {
     counter = 0;
     prevHour= atoi(timeHour);
   }
+  JsonArray data = packet.createNestedArray("data");
   JsonObject data_0 = data.createNestedObject();
   data_0["key"] = "counter";
-  data_0["value"] = 324;
+  data_0["value"] = counter;
 
   JsonObject data_1 = data.createNestedObject();
   data_1["key"] = "hours";
-  data_1["value"] = 21;
+  data_1["value"] = timeHour;
   if (bme1_status)
   {
     JsonObject data_2 = data.createNestedObject();
@@ -222,10 +224,10 @@ void loop() {
     data_10["value"] = 29.2;  
   } 
   serializeJson(packet, &datastr, 768);
-
+  packet.clear();
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval*1000){
-    Serial.println(data);
+    Serial.println(datastr);
     if (client.publish(outtopic,datastr))
     {
       Serial.print("Published to ");

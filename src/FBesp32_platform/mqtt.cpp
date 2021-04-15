@@ -37,8 +37,6 @@ void MQTTreconnect(PubSubClient* client,char* chipId_s)
         Serial.println("Reconnecting to MQTT...");
         if (client -> connect(chipId_s)) {
             Serial.println("reconnected");
-                client -> publish("/outtopic",strcat(chipId_s ," is reconnected and Ready"));
-                delay(100);
                 client -> subscribe("/intopic");
                 delay(400);
         } else {
